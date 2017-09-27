@@ -13,7 +13,7 @@ For processing, some things are needed beforehand:
 - a glob to find clear sky images
 - a glob to find dark images
 - a glob to find the actual images
-- the angle and shift between the two image files in each data set
+- the angle and shift between the two image files in each data set -> `find_alignment.py`
 - optional: a region of clear sky in the data files
 
 These can be supplied in the script, as command line options or in
@@ -29,4 +29,16 @@ To generate a sample config file:
 
 To use a config file:
 
-	python so2eval.py --configfile ./path/to/config.conf
+    python so2eval.py --configfile ./path/to/config.conf
+
+
+`find_alignment.py`
+-------------------
+
+Try to find the translation and rotation between two images. Be very
+careful with the result; ideally, use images with no or very little so2
+and a lot of unmovable background objects (eg. the volcano).
+
+Usage:
+
+    python find_alignment.py --help
