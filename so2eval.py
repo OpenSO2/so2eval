@@ -59,6 +59,7 @@ from localconfig import config
 import sys
 import os
 import ast
+from modules.strtodate import strtodate
 
 # define all config options
 configurations = {
@@ -181,7 +182,6 @@ scaledbgoffband = meanbgoffband / np.max(meanbgoffband)
 filesonband = sorted( glob.glob(conf.glob_files_onband) )
 filesoffband = sorted( glob.glob(conf.glob_files_offband) )
 
-from helpers import strtodate
 #
 # process all payload images
 #
@@ -216,7 +216,7 @@ for f in zip(filesonband, filesoffband):
 	h, w = onband.shape
 	# rotate
 	rot_matrix = cv2.getRotationMatrix2D((h/2, w/2), conf.angle, 1)
-	onband = cv2.warpAffine(onband, rot_matrix, (w, h));
+	onband = cv2.warpAffine(onband, rot_matrix, (w, h))
 	# translate
 	translation_matrix = np.float32([ [1, 0, conf.moveleft], [0, 1, conf.movetop] ])
 	onband = cv2.warpAffine(onband, translation_matrix, (w, h))
@@ -243,7 +243,7 @@ for f in zip(filesonband, filesoffband):
 
 	# rotate
 	rot_matrix = cv2.getRotationMatrix2D((h/2, w/2), conf.rotate, 1)
-	calibrated = cv2.warpAffine(calibrated, rot_matrix, (w, h));
+	calibrated = cv2.warpAffine(calibrated, rot_matrix, (w, h))
 
 	#
 	# save to new output file
