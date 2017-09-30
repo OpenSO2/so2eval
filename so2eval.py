@@ -1,12 +1,53 @@
 # coding: utf-8
 from __future__ import print_function
 #
-# Very simple so2 imagery evaluation script
+# Very simple so2 imagery evaluation script to process "raw" images
+# into something useful without requiring manual intervention and
+# tweaking.
 #
 # TODO: compensate for light dillution
-# TODO: substract background (cite!)
-# TODO: check exposure time
-# TODO: create out folder
+# TODO: add test
+# TODO: take time average of both images, put out warning if more than 1s diff
+# TODO: refactor into module
+# TODO: find a way to take dark image exposure into account
+#
+# Background correction (dividing the plume by its background) is
+# optional. In the case that both images are of (very) similar exposure,
+# background correction is essentially a no-op and can be omited. This
+# saves a bit of time and avoids having to fiend a plume-free field in
+# the plume images. If you want to be on the save side, use background
+# correction.
+#
+# Beware: it is assumed that the dark images are taken with the same
+# exposure time as the payload images.
+#
+#
+# Timestamps
+# ----------
+# Determining the exact timestamp for the measurements is implemented by
+# parsing the filenames using grouped regular expressions containing
+# year, month, day, hour, second and millisecond, assuming the these
+# values would usually appear in the filename.
+#
+# Examples:
+#
+# datepattern = .*(?P<year>\w{4})_(?P<month>\w{2})_(?P<day>\w{2})-(?P<hour>\w{2})_(?P<minute>\w{2})_(?P<second>\w{2})_(?P<millisecond>\w{3})
+# testing_2017_06_08-12_19_44_091_cam_bot.png
+#
+# datepattern = .*(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})
+# 20170920_170218_232_M_B.tif
+#
+#
+# Configuration
+# -------------
+# Configuration will be read in three steps (overriding order)
+# - from internal presets in this file
+# - from config file if found
+# - from command line options
+#
+# Run with --help to get a description of all config values. Command
+# line options can be directly used in a INI style config file. Run
+# with --saveconfig to generate a configfile with default values.
 #
 import numpy as np
 from scipy.misc import imread
@@ -16,33 +57,47 @@ import cv2
 import argparse
 from localconfig import config
 import sys
+import os
 import ast
-
-#
-# Configuration will be read in three steps (overriding order)
-# - from internal presets in this file
-# - from config file if found
-# - from command line options
-#
 
 # define all config options
 configurations = {
-	'configfile': { "default": "config.config", "help": 'Specify config file', "type": str},
-	"use_bg_correction": { "default": True, "help": "", "type": str},
-	"roi": { "default": '[0, 940, 100, 1300]', "help": "", "type": str}, # top, bot, left, right
-	"plume_free_field": { "default": '[340, 620, 1088, 1300]', "help": "", "type": str}, # top, bot, left, right
-	"calib": { "default": 0.171371/730, "help": "", "type": float},
-	"glob_dark_onband": { "default": "", "help": "", "type": str},
-	"glob_dark_offband": { "default": "", "help": "", "type": str},
-	"glob_files_onband": { "default": "", "help": "", "type": str},
-	"glob_files_offband": { "default": "", "help": "", "type": str},
-	"glob_bg_onband": { "default": "", "help": "", "type": str},
-	"glob_bg_offband": { "default": "", "help": "", "type": str},
-	"outdir": { "default": "out/", "help": "", "type": str},
-	"angle": { "default": -1, "help": "rotation between the two images", "type": float},
-	"moveleft": { "default": -1, "help": "left offset between the two images", "type": int},
-	"movetop": { "default": -35, "help": "right offset between the two images", "type": int},
-	"saveconfig": { "default": False, "help": "", "type": str},
+	'configfile': { "default": None, "type": str,
+		"help": 'Specify config file.'},
+	"use_bg_correction": { "default": True, "type": str,
+		"help": "Flag if background correction should be done. If set, plume_free_field must also be set."},
+	"roi": { "default": '[0, -1, 0, -1]', "type": str,
+		"help": "The region of interest in which the files are evaluated. The rest will be cropped. Form: [top, bot, left, right] in px.",},
+	"plume_free_field": { "default": '[340, 620, 1088, 1300]', "type": str,
+		"help": "If background correction is used, this part of the images will be used for evaluation. Relative to the roi. Form [top, bot, left, right] in px."},
+	"calib": { "default": 1, "type": float,
+		"help": "Calibration constant to convert apparent absorption to ppm*m"},
+	"glob_dark_onband": { "default": "", "type": str,
+		"help": "Pattern to find dark onband images."},
+	"glob_dark_offband": { "default": "", "type": str,
+		"help": "Pattern to find dark offband images."},
+	"glob_files_onband": { "default": "", "type": str,
+		"help": "Pattern to find onband images."},
+	"glob_files_offband": { "default": "", "type": str,
+		"help": "Pattern to find dark offband images."},
+	"glob_bg_onband": { "default": "", "type": str,
+		"help": "Pattern to find background onband images."},
+	"glob_bg_offband": { "default": "", "type": str,
+		"help": "Pattern to find background onband images."},
+	"outdir": { "default": "out/", "type": str,
+		"help": "Folder where output files will be saved. Will be created if necessary."},
+	"angle": { "default": 0, "type": float,
+		"help": "Rotation between the two images in px."},
+	"moveleft": { "default": 0, "type": int,
+		"help": "Left offset between the two images in px."},
+	"movetop": { "default": 0, "type": int,
+		"help": "Right offset between the two images in px."},
+	"datepattern": { "default": "(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})", "type": str,
+		"help": "Grouped Regexp to parse the timestamp from the filenames."},
+	"rotate": { "default": 0, "type": str,
+		"help": "More often than not, images in the field are rotated or upside down. This will correct that (in degrees)."},
+	"saveconfig": { "default": False, "type": str,
+		"help": "Save the current config to a file, eg. to get started."},
 }
 defaults = {k for k in configurations}
 defaults = {k: configurations[k]["default"] for k in defaults}
@@ -55,6 +110,7 @@ try:
 	if i != -1:
 		configfile =  sys.argv[i+1]
 except ValueError:
+	# not found; never mind, just use the defaults
 	pass
 
 if configfile:
@@ -66,7 +122,7 @@ parser = argparse.ArgumentParser(description='Preprocess SO2 images to ppm*m num
 parser.set_defaults(**defaults)
 
 for arg in defaults:
-	parser.add_argument('--'+arg, dest=arg, help=configurations[arg]["help"], type=configurations[arg]["type"])
+	parser.add_argument('--'+arg, dest=arg, help=configurations[arg]["help"] + " Default: " + str(configurations[arg]["default"]), type=configurations[arg]["type"])
 
 conf = parser.parse_args()
 
@@ -84,6 +140,11 @@ if conf.saveconfig:
 	config.save(conf.saveconfig)
 	exit(0)
 
+# try to create the output folder
+if not os.path.exists(conf.outdir):
+	os.makedirs(conf.outdir)
+	os.makedirs(conf.outdir + "/figures")
+	os.makedirs(conf.outdir + "/data")
 
 
 #
@@ -120,12 +181,17 @@ scaledbgoffband = meanbgoffband / np.max(meanbgoffband)
 filesonband = sorted( glob.glob(conf.glob_files_onband) )
 filesoffband = sorted( glob.glob(conf.glob_files_offband) )
 
+from helpers import strtodate
 #
 # process all payload images
 #
 fig, ax = plt.subplots()
 for f in zip(filesonband, filesoffband):
 	print("process", " and ".join(f))
+
+	# get timestamp from file set
+	timestamp = strtodate(conf.datepattern, f[0])
+	conf.timestamp = timestamp
 
 	# read image
 	onband = np.array( imread(f[0]), dtype=np.float64 )
@@ -175,6 +241,10 @@ for f in zip(filesonband, filesoffband):
 	roi = conf.roi
 	calibrated = calibrated[roi[0]: roi[1], roi[2]:roi[3]] # remove edges for display (very high false signal fucks with color bar)
 
+	# rotate
+	rot_matrix = cv2.getRotationMatrix2D((h/2, w/2), conf.rotate, 1)
+	calibrated = cv2.warpAffine(calibrated, rot_matrix, (w, h));
+
 	#
 	# save to new output file
 	#
@@ -184,7 +254,9 @@ for f in zip(filesonband, filesoffband):
 	cax = plt.imshow(calibrated, cmap=plt.get_cmap("hot"))
 	fig.colorbar(cax)
 	#~ plt.show()
-	# fixup
-	filename = f[0].replace("images/", "").replace("_top", "").replace(".png", "")
+
+	filename = "{:%Y-%m-%d_%H-%M-%S-%f}".format(timestamp)
 	fig.savefig(conf.outdir + "/figures/" + filename + ".png", dpi=100)
-	np.save(conf.outdir + "/data/"  + filename +  ".npy", calibrated)
+	#~ np.save(conf.outdir + "/data/"  + filename, calibrated)
+	np.savez_compressed(conf.outdir + "/data/"  + filename, data=calibrated, config=conf)
+	print("saved", filename)
