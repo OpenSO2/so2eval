@@ -5,12 +5,6 @@ from __future__ import print_function
 # into something useful without requiring manual intervention and
 # tweaking.
 #
-# TODO: compensate for light dillution
-# TODO: add test
-# TODO: take time average of both images, put out warning if more than 1s diff
-# TODO: refactor into module
-# TODO: find a way to take dark image exposure into account
-#
 # Background correction (dividing the plume by its background) is
 # optional. In the case that both images are of (very) similar exposure,
 # background correction is essentially a no-op and can be omited. This
@@ -63,41 +57,41 @@ from modules.strtodate import strtodate
 
 # define all config options
 configurations = {
-	'configfile': { "default": None, "type": str,
+	'configfile': {"default": None, "type": str,
 		"help": 'Specify config file.'},
-	"use_bg_correction": { "default": True, "type": str,
+	"use_bg_correction": {"default": True, "type": str,
 		"help": "Flag if background correction should be done. If set, plume_free_field must also be set."},
-	"roi": { "default": '[0, -1, 0, -1]', "type": str,
+	"roi": {"default": '[0, -1, 0, -1]', "type": str,
 		"help": "The region of interest in which the files are evaluated. The rest will be cropped. Form: [top, bot, left, right] in px.",},
-	"plume_free_field": { "default": '[340, 620, 1088, 1300]', "type": str,
+	"plume_free_field": {"default": '[340, 620, 1088, 1300]', "type": str,
 		"help": "If background correction is used, this part of the images will be used for evaluation. Relative to the roi. Form [top, bot, left, right] in px."},
-	"calib": { "default": 1, "type": float,
+	"calib": {"default": 1, "type": float,
 		"help": "Calibration constant to convert apparent absorption to ppm*m"},
-	"glob_dark_onband": { "default": "", "type": str,
+	"glob_dark_onband": {"default": "", "type": str,
 		"help": "Pattern to find dark onband images."},
-	"glob_dark_offband": { "default": "", "type": str,
+	"glob_dark_offband": {"default": "", "type": str,
 		"help": "Pattern to find dark offband images."},
-	"glob_files_onband": { "default": "", "type": str,
+	"glob_files_onband": {"default": "", "type": str,
 		"help": "Pattern to find onband images."},
-	"glob_files_offband": { "default": "", "type": str,
+	"glob_files_offband": {"default": "", "type": str,
 		"help": "Pattern to find dark offband images."},
-	"glob_bg_onband": { "default": "", "type": str,
+	"glob_bg_onband": {"default": "", "type": str,
 		"help": "Pattern to find background onband images."},
-	"glob_bg_offband": { "default": "", "type": str,
+	"glob_bg_offband": {"default": "", "type": str,
 		"help": "Pattern to find background onband images."},
-	"outdir": { "default": "out/", "type": str,
+	"outdir": {"default": "out/", "type": str,
 		"help": "Folder where output files will be saved. Will be created if necessary."},
-	"angle": { "default": 0, "type": float,
+	"angle": {"default": 0, "type": float,
 		"help": "Rotation between the two images in px."},
-	"moveleft": { "default": 0, "type": int,
+	"moveleft": {"default": 0, "type": int,
 		"help": "Left offset between the two images in px."},
-	"movetop": { "default": 0, "type": int,
+	"movetop": {"default": 0, "type": int,
 		"help": "Right offset between the two images in px."},
-	"datepattern": { "default": "(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})", "type": str,
+	"datepattern": {"default": "(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})", "type": str,
 		"help": "Grouped Regexp to parse the timestamp from the filenames."},
-	"rotate": { "default": 0, "type": str,
+	"rotate": {"default": 0, "type": str,
 		"help": "More often than not, images in the field are rotated or upside down. This will correct that (in degrees)."},
-	"saveconfig": { "default": False, "type": str,
+	"saveconfig": {"default": False, "type": str,
 		"help": "Save the current config to a file, eg. to get started."},
 }
 defaults = {k for k in configurations}
@@ -109,21 +103,21 @@ configfile = configurations["configfile"]["default"]
 try:
 	i = sys.argv.index("--configfile")
 	if i != -1:
-		configfile =  sys.argv[i+1]
+		configfile = sys.argv[i + 1]
 except ValueError:
 	# not found; never mind, just use the defaults
 	pass
 
 if configfile:
 	config.read(configfile)
-	defaults.update( dict(config.items("Defaults")) )
+	defaults.update(dict(config.items("Defaults")))
 
 # parse command line options and override defaults and configfile
 parser = argparse.ArgumentParser(description='Preprocess SO2 images to ppm*m numpy files')
 parser.set_defaults(**defaults)
 
 for arg in defaults:
-	parser.add_argument('--'+arg, dest=arg, help=configurations[arg]["help"] + " Default: " + str(configurations[arg]["default"]), type=configurations[arg]["type"])
+	parser.add_argument('--' + arg, dest=arg, help=configurations[arg]["help"] + " Default: " + str(configurations[arg]["default"]), type=configurations[arg]["type"])
 
 conf = parser.parse_args()
 
@@ -152,15 +146,13 @@ if not os.path.exists(conf.outdir):
 # start the actual work
 #
 
-
-
 #
 # get dark image (mean images if more than one)
 #
 darkonband = glob.glob(conf.glob_dark_onband)
 darkoffband = glob.glob(conf.glob_dark_offband)
-darkonband = [ imread(f) for f in darkonband ]
-darkoffband = [ imread(f) for f in darkoffband ]
+darkonband = [imread(f) for f in darkonband]
+darkoffband = [imread(f) for f in darkoffband]
 darkonband = np.mean(darkonband, axis=0)
 darkoffband = np.mean(darkoffband, axis=0)
 
@@ -169,8 +161,8 @@ darkoffband = np.mean(darkoffband, axis=0)
 #
 bgonband = glob.glob(conf.glob_bg_onband)
 bgoffband = glob.glob(conf.glob_bg_offband)
-bgoffband = [ imread(f) - darkoffband for f in bgoffband ]
-bgonband = [ imread(f) - darkonband for f in bgonband ]
+bgoffband = [imread(f) - darkoffband for f in bgoffband]
+bgonband = [imread(f) - darkonband for f in bgonband]
 meanbgoffband = np.mean(bgoffband, axis=0)
 meanbgonband = np.mean(bgonband, axis=0)
 scaledbgonband = meanbgonband / np.max(meanbgonband)
@@ -179,8 +171,8 @@ scaledbgoffband = meanbgoffband / np.max(meanbgoffband)
 #
 # get all payload files and correct for dark image
 #
-filesonband = sorted( glob.glob(conf.glob_files_onband) )
-filesoffband = sorted( glob.glob(conf.glob_files_offband) )
+filesonband = sorted(glob.glob(conf.glob_files_onband))
+filesoffband = sorted(glob.glob(conf.glob_files_offband))
 
 #
 # process all payload images
@@ -194,8 +186,8 @@ for f in zip(filesonband, filesoffband):
 	conf.timestamp = timestamp
 
 	# read image
-	onband = np.array( imread(f[0]), dtype=np.float64 )
-	offband = np.array( imread(f[1]), dtype=np.float64 )
+	onband = np.array(imread(f[0]), dtype=np.float64)
+	offband = np.array(imread(f[1]), dtype=np.float64)
 
 	# remove dark image
 	onband -= darkonband
@@ -208,41 +200,42 @@ for f in zip(filesonband, filesoffband):
 	#
 	# correct light dilution
 	#
-	pass # todo
+	pass  # todo
 
 	#
 	# align images
 	#
 	h, w = onband.shape
 	# rotate
-	rot_matrix = cv2.getRotationMatrix2D((h/2, w/2), conf.angle, 1)
+	rot_matrix = cv2.getRotationMatrix2D((h / 2, w / 2), conf.angle, 1)
 	onband = cv2.warpAffine(onband, rot_matrix, (w, h))
 	# translate
-	translation_matrix = np.float32([ [1, 0, conf.moveleft], [0, 1, conf.movetop] ])
+	translation_matrix = np.float32([[1, 0, conf.moveleft], [0, 1, conf.movetop]])
 	onband = cv2.warpAffine(onband, translation_matrix, (w, h))
 
 	#
 	# calculate the absorbance
 	#
 	if conf.use_bg_correction:
-		plume_free_field = conf.plume_free_field
-		bgonband = np.mean( onband[plume_free_field[0]:plume_free_field[1], plume_free_field[2]:plume_free_field[3]] )
-		bgoffband = np.mean( offband[plume_free_field[0]:plume_free_field[1], plume_free_field[2]:plume_free_field[3]] )
+		pf = conf.plume_free_field
+		bgonband = np.mean(onband[pf[0]:pf[1], pf[2]:pf[3]])
+		bgoffband = np.mean(offband[pf[0]:pf[1], pf[2]:pf[3]])
 		A = - np.log10(onband / bgonband) + np.log10(offband / bgoffband)
 	else:
-		A = - np.log10( onband / offband )
-	A[A > 2000] = 0 # remove inf due to warping where the images don't overlap
-	A[A < .05] = 0 # remove noise in output
+		A = - np.log10(onband / offband)
+	A[A > 2000] = 0  # remove inf due to warping where the images don't overlap
+	# A[A < .05] = 0  # remove noise in output
 
 	#
 	# apply calibration
 	#
 	calibrated = A / conf.calib
 	roi = conf.roi
-	calibrated = calibrated[roi[0]: roi[1], roi[2]:roi[3]] # remove edges for display (very high false signal fucks with color bar)
+	# remove edges for display (very high false signal fucks with color bar)
+	calibrated = calibrated[roi[0]: roi[1], roi[2]:roi[3]]
 
 	# rotate
-	rot_matrix = cv2.getRotationMatrix2D((h/2, w/2), conf.rotate, 1)
+	rot_matrix = cv2.getRotationMatrix2D((h / 2, w / 2), conf.rotate, 1)
 	calibrated = cv2.warpAffine(calibrated, rot_matrix, (w, h))
 
 	#
@@ -253,10 +246,10 @@ for f in zip(filesonband, filesoffband):
 	fig.suptitle('SO2 path concentration (ppm m)')
 	cax = plt.imshow(calibrated, cmap=plt.get_cmap("hot"))
 	fig.colorbar(cax)
-	#~ plt.show()
 
 	filename = "{:%Y-%m-%d_%H-%M-%S-%f}".format(timestamp)
 	fig.savefig(conf.outdir + "/figures/" + filename + ".png", dpi=100)
-	#~ np.save(conf.outdir + "/data/"  + filename, calibrated)
-	np.savez_compressed(conf.outdir + "/data/"  + filename, data=calibrated, config=conf)
+	# np.save(conf.outdir + "/data/"  + filename, calibrated)
+	f = conf.outdir + "/data/" + filename
+	np.savez_compressed(f, data=calibrated, config=conf)
 	print("saved", filename)

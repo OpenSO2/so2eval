@@ -1,6 +1,10 @@
+"""Interpolate a line between two arbitrary points in an image."""
 import numpy
 from scipy import interpolate
+
+
 def interpolate_line_from_img(point_a, point_b, img):
+	"""Interpolate a line between two arbitrary points in an image."""
 	x1, x2 = point_a
 	y1, y2 = point_b
 
