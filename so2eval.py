@@ -143,7 +143,7 @@ conf.roi = ast.literal_eval(conf.roi)
 #
 if conf.saveconfig:
 	for c in vars(conf):
-		if(c != "saveconfig" and c != "configfile"):
+		if c != "saveconfig" and c != "configfile":
 			comment = options[c]["help"]
 			config.set("Defaults", c, repr(getattr(conf, c)), comment=comment)
 	config.save(conf.saveconfig)

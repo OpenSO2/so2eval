@@ -8,7 +8,9 @@ install:
   - "pip install pytest"
   - "pip install pydocstyle"
   - "pip install tox-travis"
+  - "pip install pylint"
 script:
   - tox
+  - pylint *.py modules/*.py
   - flake8 --exclude=./modules/__init__.py,modules/tests,.tox
   - pydocstyle *

@@ -1,0 +1,2 @@
+[MESSAGES CONTROL]
+disable=mixed-indentation,invalid-name,bad-continuation,anomalous-backslash-in-string,no-member,wrong-import-order,wildcard-import,fixme,missing-docstring,access-member-before-definition,too-many-instance-attributes,redefined-builtin,import-error,line-too-long,unnecessary-pass

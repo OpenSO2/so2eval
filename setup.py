@@ -1,3 +1,4 @@
+"""Just a simple setup script."""
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 # To use a consistent encoding

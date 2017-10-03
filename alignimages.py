@@ -10,7 +10,6 @@ import numpy as np
 
 def alignimages(im1, im2):
 	"""Automatically align two images."""
-
 	# Find size of image1
 	sz = im1.shape
 
@@ -37,7 +36,7 @@ def alignimages(im1, im2):
 	# FIXME: use image depth to calc the scaling factor (this assumes 16bit)
 	im1_8 = (im1 / 256).astype('uint8')
 	im2_8 = (im2 / 256).astype('uint8')
-	(cc, warp_matrix) = cv2.findTransformECC(im1_8, im2_8, warp_matrix,
+	(_, warp_matrix) = cv2.findTransformECC(im1_8, im2_8, warp_matrix,
 		warp_mode, criteria)
 
 	# Use warpAffine for Translation, Euclidean and Affine
