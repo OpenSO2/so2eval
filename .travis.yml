@@ -1,0 +1,14 @@
+sudo: false
+language: python
+python:
+  - "2.7"
+  - "3.5"
+install:
+  - "pip install flake8"
+  - "pip install pytest"
+  - "pip install pydocstyle"
+  - "pip install tox-travis"
+script:
+  - tox
+  - flake8 --exclude=./modules/__init__.py,modules/tests,.tox
+  - pydocstyle *
