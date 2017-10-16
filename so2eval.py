@@ -46,17 +46,17 @@ with --saveconfig to generate a configfile with default values.
 
 """
 from __future__ import print_function
-import numpy as np
-from scipy.misc import imread
-import matplotlib.pyplot as plt
 import glob
-import cv2
 import argparse
-from localconfig import config
 import sys
 import os
 import ast
+import cv2
+from scipy.misc import imread
+import matplotlib.pyplot as plt
+from localconfig import config
 from modules.strtodate import strtodate
+import numpy as np
 
 # define all config options
 options = {
@@ -94,8 +94,8 @@ options = {
 		"help": "Left offset between the two images in px."},
 	"movetop": {"default": 0, "type": int,
 		"help": "Right offset between the two images in px."},
-	"datepattern": {"default": "(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_"
-	"(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})",
+	"datepattern": {"default": r"(?P<year>\w{4})(?P<month>\w{2})(?P<day>\w{2})_"
+	r"(?P<hour>\w{2})(?P<minute>\w{2})(?P<second>\w{2})_(?P<millisecond>\w{3})",
 		"type": str,
 		"help": "Grouped Regexp to parse the timestamp from the filenames."},
 	"rotate": {"default": 0, "type": str,
@@ -214,7 +214,8 @@ for f in zip(filesonband, filesoffband):
 	#
 	# correct light dilution
 	#
-	pass  # todo
+
+	# todo
 
 	#
 	# align images

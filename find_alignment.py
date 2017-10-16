@@ -2,10 +2,10 @@
 """Try to find the translation and rotation between two images."""
 
 from __future__ import print_function
+import argparse
 import numpy as np
 from scipy.misc import imread
 import matplotlib.pyplot as plt
-import argparse
 from alignimages import alignimages
 
 parser = argparse.ArgumentParser(
